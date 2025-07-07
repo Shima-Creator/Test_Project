@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style>
+        .search_line {
+            height: 60px;
+            width: 500px;
+            border-radius: 9px;
+            margin-right: 0px;
+            font-size: 24px;
+        }
+        .search_button {
+            width: 200px;
+            height: 65px;
+            border-radius: 9px;
+            margin-left: 0px;
+            font-size: 24px;
+        }
+        .search_button:hover {
+            width: 200px;
+            height: 65px;
+            border-radius: 9px;
+            margin-left: 0px;
+            font-size: 24px;
+            background: black;
+            color: white;
+        }
+        h1 {
+            font-size: 50px;
+        }
+    </style>
+</head>
+<body>
+    <h1>API</h1>
+    <form class="search_form" method="get" action="{% url 'search_product' %}">
+        <input id="search_line" class="search_line" type="text" name="q" placeholder="Поиск товаров">
+        <button id="search_button" class="search_button" type="submit">Найти</button>
+    </form>
+</body>
+</html>

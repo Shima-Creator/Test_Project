@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align:center;
+            font-size: 18px;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-size: 24px;
+        }
+        #filters {
+            font-size: 24px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 2px solid black;
+            border-radius: 9px;
+            height: 50px;
+        }
+        #filters .label {
+            margin: 40px;
+        }
+        input[type="range"] {
+            width: 200px;
+        }
+        .filter {
+            float: left;
+            margin-right: 40px;
+        }
+        #price-range {
+            display: flex;
+        }
+        #rating-range {
+            display: flex;
+
+        }
+        #feedback-range {
+            display: flex;
+        }
+        #save-button {
+            height: 55px;
+            width: 200px;
+            border: 1px solid #08a4ff;
+            border-radius: 9px;
+            background: #08a4ff;
+            color: white;
+            font-size: 20px;
+        }
+        #save-button:hover {
+            height: 55px;
+            width: 200px;
+            border: 1px solid #08a4ff;
+            border-radius: 9px;
+            background: white;
+            color: black;
+            font-size: 20px;
+        }
+        .search_line {
+            height: 60px;
+            width: 500px;
+            border-radius: 9px;
+            margin-right: 0px;
+            font-size: 24px;
+        }
+        .search_button {
+            width: 200px;
+            height: 65px;
+            border-radius: 9px;
+            margin-left: 0px;
+            font-size: 24px;
+        }
+        .search_button:hover {
+            width: 200px;
+            height: 65px;
+            border-radius: 9px;
+            margin-left: 0px;
+            font-size: 24px;
+            background: black;
+            color: white;
+        }
+        h1 {
+            font-size: 50px;
+        }
+        #rating-range::-webkit-slider-runnable-track {
+
+        }
+        .slider-container {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            gap: 10px;
+        }
+
+        input[type="range"] {
+            flex-grow: 1;
+        }
+
+        .min-value, .range-output {
+            white-space: nowrap;
+        }
+
+        /* New styles for charts */
+        .charts-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin: 30px 0;
+        }
+
+        .chart-wrapper {
+            width: 48%;
+            margin-bottom: 30px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .chart-title {
+            text-align: center;
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Ваш запрос: "{{ query }}"</h1>
+    <form class="search_form" method="get" action="{% url 'products' %}" id="form1">
+        <input id="search_line" class="search_line" type="text" name="query" placeholder="Поиск товаров">
+        <button id="search_button" class="search_button" type="submit">Найти</button>
+        <input type="hidden" name="form_type" value="form1">
+    </form>
+    <div id="filters">
+        <form method="get" action="{% url 'products' %}" id="form2">
+            <div class="filter">
+                <label for="price-range">Max. диапазон цен {{ max_price_range.Price__max }}</label>
+                <div class="slider-container">
+                    <span class="min-value">0</span>
+                    <input type="range" id="price-range" name="price-range" min="0" max="{{ max_price_range.Price__max }}" value="{{ price_range.Price__max }}" oninput="updateValue(this.value, 'output')">
+                    <output class="range-output" id="output">{{ price_range.Price__max }}</output>
+                </div>
+            </div>
+
+            <div class="filter">
+                <label for="rating-range">Max. рейтинг {{ max_rating_range.Rating__max }}</label>
+                <div class="slider-container">
+                    <output class="range-output" id="rating-output">0</output>
+                    <input type="range" id="rating-range" name="rating-range" min="0" max="{{ max_rating_range.Rating__max }}" value="{{ rating_range.Rating__max }}" oninput="updateValue(this.value, 'rating-output')">
+                    <span class="min-value">5</span>
+                </div>
+            </div>
+
+            <div class="filter">
+                <label for="feedback-range">Max. кол-во отзывов {{ max_feedback_range.Feedbacks__max }}</label>
+                <div class="slider-container">
+                    <output class="min-value" id="feedback-output">{{ feedback_range }}</output>
+                    <input type="range" id="feedback-range" name="feedback-range" min="0" max="{{ max_feedback_range.Feedbacks__max }}" value="{{ feedback_range.Feedbacks__max }}" oninput="updateValue(this.value, 'feedback-output')">
+                    <span class="range-output" >{{ max_feedback_range.Feedbacks__max }}</span>
+                </div>
+            </div>
+            <div>
+                <button id="save-button" type="submit">Применить фильтры</button>
+            </div>
+            <input type="hidden" name="query" value="{{ query }}">
+            <input type="hidden" name="form_type" value="form2">
+        </form>
+    </div>
+
+    <div class="charts-container">
+        <div class="chart-wrapper">
+            <div class="chart-title">Распределение цен</div>
+            <canvas id="priceHistogram"></canvas>
+        </div>
+        <div class="chart-wrapper">
+            <div class="chart-title">Скидки vs Рейтинг</div>
+            <canvas id="discountRatingChart"></canvas>
+        </div>
+    </div>
+
+    <table border="1">
+        <thead>
+            <tr>
+                <th><a href="{% url 'products' %}{% if request.GET %}?{% endif %}{% for key, value in request.GET.items %}{% if key != 'sort_by' and key != 'order' and key != 'form_type' %}{{ key }}={{ value }}&{% endif %}{% endfor %}form_type=form2&sort_by=Name&order={% if request.GET.sort_by == 'Name' and request.GET.order == 'asc' %}desc{% else %}asc{% endif %}">Название товара</a></th>
+                <th>Продавец</th>
+                <th><a href="{% url 'products' %}{% if request.GET %}?{% endif %}{% for key, value in request.GET.items %}{% if key != 'sort_by' and key != 'order' and key != 'form_type' %}{{ key }}={{ value }}&{% endif %}{% endfor %}form_type=form2&sort_by=Rating&order={% if request.GET.sort_by == 'Rating' and request.GET.order == 'asc' %}desc{% else %}asc{% endif %}">Рейтинг</a></th>
+                <th><a href="{% url 'products' %}{% if request.GET %}?{% endif %}{% for key, value in request.GET.items %}{% if key != 'sort_by' and key != 'order' and key != 'form_type' %}{{ key }}={{ value }}&{% endif %}{% endfor %}form_type=form2&sort_by=Feedbacks&order={% if request.GET.sort_by == 'Feedbacks' and request.GET.order == 'asc' %}desc{% else %}asc{% endif %}">Количество отзывов</a></th>
+                <th><a href="{% url 'products' %}{% if request.GET %}?{% endif %}{% for key, value in request.GET.items %}{% if key != 'sort_by' and key != 'order' and key != 'form_type' %}{{ key }}={{ value }}&{% endif %}{% endfor %}form_type=form2&sort_by=Sale_Price&order={% if request.GET.sort_by == 'Sale_Price' and request.GET.order == 'asc' %}desc{% else %}asc{% endif %}">Цена со скидкой</a></th>
+                <th><a href="{% url 'products' %}{% if request.GET %}?{% endif %}{% for key, value in request.GET.items %}{% if key != 'sort_by' and key != 'order' and key != 'form_type' %}{{ key }}={{ value }}&{% endif %}{% endfor %}form_type=form2&sort_by=Price&order={% if request.GET.sort_by == 'Price' and request.GET.order == 'asc' %}desc{% else %}asc{% endif %}">Цена</a></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for product in products %}
+                <tr>
+                    <td>{{ product.Name }}</td>
+                    <td>{{ product.Seller }}</td>
+                    <td>{{ product.Rating }}</td>
+                    <td>{{ product.Feedbacks }}</td>
+                    <td>{{ product.Sale_Price }}</td>
+                    <td>{{ product.Price }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <script>
+        function updateValue(val, id) {
+            document.getElementById(id).innerHTML = val; // Обновляем значения
+        }
+
+        // Устанавливаем начальные значения
+        window.onload = function() {
+            updateValue(document.getElementById('price-range').value, 'output');
+            updateValue(document.getElementById('rating-range').value, 'rating-output');
+            updateValue(document.getElementById('feedback-range').value, 'feedback-output');
+
+            // Initialize charts
+            initializeCharts();
+        };
+
+        // Function to calculate discount percentage
+        function calculateDiscount(price, salePrice) {
+            return ((price - salePrice) / price * 100).toFixed(1);
+        }
+
+        // Function to initialize charts
+        function initializeCharts() {
+            // Prepare data for charts
+            const productsData = [
+                {% for product in products %}
+                {
+                    price: {{ product.Price }},
+                    salePrice: {{ product.Sale_Price }},
+                    rating: {{ product.Rating }},
+                    discount: calculateDiscount({{ product.Price }}, {{ product.Sale_Price }})
+                },
+                {% endfor %}
+            ];
+
+            // Price Histogram
+            const priceRanges = [
+                '0-1000', '1001-3000', '3001-5000', '5001-7000',
+                '7001-9000', '9001-11000', '11001-13000', '13001-15000'
+            ];
+
+            const priceCounts = new Array(priceRanges.length).fill(0);
+
+            productsData.forEach(product => {
+                const price = product.price;
+                if (price <= 1000) priceCounts[0]++;
+                else if (price <= 3000) priceCounts[1]++;
+                else if (price <= 5000) priceCounts[2]++;
+                else if (price <= 7000) priceCounts[3]++;
+                else if (price <= 9000) priceCounts[4]++;
+                else if (price <= 11000) priceCounts[5]++;
+                else if (price <= 13000) priceCounts[6]++;
+                else if (price <= 15000) priceCounts[7]++;
+            });
+
+            const priceHistogramCtx = document.getElementById('priceHistogram').getContext('2d');
+            const priceHistogram = new Chart(priceHistogramCtx, {
+                type: 'bar',
+                data: {
+                    labels: priceRanges,
+                    datasets: [{
+                        label: 'Количество товаров',
+                        data: priceCounts,
+                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Количество товаров'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Диапазон цен'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Discount vs Rating Scatter Plot
+            const discountRatingCtx = document.getElementById('discountRatingChart').getContext('2d');
+            const discountRatingChart = new Chart(discountRatingCtx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Скидка vs Рейтинг',
+                        data: productsData.map(product => ({
+                            x: product.rating,
+                            y: product.discount
+                        })),
+                        backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 1,
+                        pointRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Размер скидки (%)'
+                            },
+                            beginAtZero: true
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Рейтинг товара'
+                            },
+                            min: 0,
+                            max: 5
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `Скидка: ${context.parsed.y}%, Рейтинг: ${context.parsed.x}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Function to update charts when filters change
+            window.updateCharts = function() {
+                // In a real application, you would fetch new data based on filters
+                // For this example, we'll just update the existing charts with current data
+                priceHistogram.update();
+                discountRatingChart.update();
+            };
+        }
+    </script>
+</body>
+</html>
